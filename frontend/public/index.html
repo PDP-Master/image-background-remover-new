@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 背景去除</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(to bottom right, #fef3c7, #fef9c3, #fef3c7);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #92400e;
+      font-size: 2.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      text-align: center;
+      color: #92400e;
+      margin-bottom: 2rem;
+    }
+    .upload-area {
+      background: #fffbeb;
+      border-radius: 1rem;
+      padding: 2rem;
+      border: 3px dashed #d97706;
+      text-align: center;
+      cursor: pointer;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .upload-area:hover {
+      background: #fef3c7;
+    }
+    .upload-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+    .upload-text {
+      color: #92400e;
+      font-size: 1.25rem;
+    }
+    .upload-text-small {
+      color: #b45309;
+      margin-top: 0.5rem;
+    }
+    .preview-area {
+      display: none;
+    }
+    .preview-area.show {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    .preview-box h3 {
+      text-align: center;
+      color: #92400e;
+      margin-bottom: 0.75rem;
+    }
+    .preview-box img {
+      width: 100%;
+      border-radius: 0.5rem;
+      border: 2px solid #d97706;
+    }
+    .preview-box.result img {
+      border-color: #22c55e;
+    }
+    .download-btn {
+      display: block;
+      margin: 0.5rem auto 0;
+      padding: 0.25rem 0.75rem;
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    .process-btn {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1.5rem;
+      border-radius: 0.75rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(to right, #d97706, #eab308);
+      border: none;
+      cursor: pointer;
+    }
+    .process-btn:disabled {
+      background: #d6d3d1;
+      cursor: not-allowed;
+    }
+    .status {
+      text-align: center;
+      margin-top: 1rem;
+      color: #92400e;
+    }
+    .status.success { color: #16a34a; }
+    .status.error { color: #dc2626; }
+    .tips {
+      margin-top: 2rem;
+      background: #fef3c7;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      color: #92400e;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖼️ AI 背景去除</h1>
+    <p class="subtitle">上传图片，自动去除背景</p>
+
+    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+    
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📁</div>
+      <p class="upload-text">点击选择图片</p>
+      <p class="upload-text-small">支持 PNG、JPG、WebP</p>
+    </div>
+
+    <div class="preview-area" id="previewArea">
+      <div class="preview-box">
+        <h3>原图</h3>
+        <img id="originalImg" src="" alt="原图">
+      </div>
+      <div class="preview-box result">
+        <h3>结果</h3>
+        <img id="resultImg" src="" alt="结果">
+        <button class="download-btn" id="downloadBtn" style="display:none">下载</button>
+      </div>
+    </div>
+
+    <button class="process-btn" id="processBtn" disabled>✨ 开始处理</button>
+    <p class="status" id="status"></p>
+
+    <div class="tips">
+      <p>💡 提示</p>
+      <ul>
+        <li>支持 PNG、JPG、WebP 等常见格式</li>
+        <li>最佳效果：主体清晰、背景简单</li>
+        <li>处理后的图片为 PNG 格式（透明背景）</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const previewArea = document.getElementById('previewArea');
+    const originalImg = document.getElementById('originalImg');
+    const resultImg = document.getElementById('resultImg');
+    const processBtn = document.getElementById('processBtn');
+    const status = document.getElementById('status');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let currentFile = null;
+
+    // 点击上传区域触发文件选择
+    uploadArea.addEventListener('click', function() {
+      console.log('点击了上传区域');
+      fileInput.click();
+    });
+
+    // 文件选择变化
+    fileInput.addEventListener('change', function(e) {
+      console.log('文件选择变化', e.target.files);
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      if (!file.type.startsWith('image/')) {
+        status.textContent = '请选择图片文件';
+        status.className = 'status error';
+        return;
+      }
+
+      currentFile = file;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        originalImg.src = evt.target.result;
+        previewArea.classList.add('show');
+        uploadArea.style.display = 'none';
+        processBtn.disabled = false;
+        status.textContent = '图片已加载，点击"开始处理"';
+        status.className = 'status';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // 处理图片
+    processBtn.addEventListener('click', async function() {
+      if (!currentFile) return;
+
+      processBtn.disabled = true;
+      processBtn.textContent = '处理中...';
+      status.textContent = '正在去除背景，请稍候...';
+      status.className = 'status';
+
+      try {
+        // 转base64
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(currentFile);
+        });
+
+        const response = await fetch('http://localhost:3000/api/remove-bg', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64 })
+        });
+
+        const data = await response.json();
+
+        if (data.result) {
+          resultImg.src = data.result;
+          downloadBtn.style.display = 'block';
+          status.textContent = '✅ 处理完成！点击图片可保存';
+          status.className = 'status success';
+        } else {
+          throw new Error(data.error || '处理失败');
+        }
+      } catch (err) {
+        status.textContent = '❌ ' + (err.message || '处理失败');
+        status.className = 'status error';
+      } finally {
+        processBtn.disabled = false;
+        processBtn.textContent = '✨ 开始处理';
+      }
+    });
+
+    // 下载
+    downloadBtn.addEventListener('click', function() {
+      const link = document.createElement('a');
+      link.href = resultImg.src;
+      link.download = 'removed-bg.png';
+      link.click();
+    });
+
+    // 阻止拖拽默认行为
+    document.addEventListener('dragover', function(e) {
+      e.preventDefault();
+    });
+
+    document.addEventListener('drop', function(e) {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        fileInput.files = e.dataTransfer.files;
+        const event = new Event('change');
+        fileInput.dispatchEvent(event);
+      }
+    });
+
+    console.log('脚本已加载');
+  </script>
+</body>
+</html>
