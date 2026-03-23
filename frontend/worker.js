@@ -1,0 +1,246 @@
+// Cloudflare Worker - AI 背景去除
+const HTML = `
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 背景去除</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(to bottom right, #fef3c7, #fef9c3, #fef3c7);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; color: #92400e; font-size: 2.25rem; margin-bottom: 0.5rem; }
+    .subtitle { text-align: center; color: #92400e; margin-bottom: 2rem; }
+    .upload-box {
+      background: #fffbeb;
+      border-radius: 1rem;
+      padding: 3rem 2rem;
+      border: 3px dashed #d97706;
+      text-align: center;
+      cursor: pointer;
+    }
+    .upload-box:hover { background: #fef3c7; }
+    .upload-icon { font-size: 4rem; }
+    .upload-text { color: #92400e; font-size: 1.25rem; margin-top: 1rem; }
+    .preview-area { display: none; }
+    .preview-area.active { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .preview-box h3 { text-align: center; color: #92400e; margin-bottom: 0.75rem; }
+    .preview-box img { width: 100%; border-radius: 0.5rem; border: 2px solid #d97706; }
+    .preview-box.result img { border-color: #22c55e; }
+    .process-btn {
+      width: 100%; padding: 1rem; border-radius: 0.75rem;
+      font-size: 1.25rem; font-weight: 600; color: white;
+      background: linear-gradient(to right, #d97706, #eab308);
+      border: none; cursor: pointer;
+    }
+    .process-btn:disabled { background: #d6d3d1; cursor: not-allowed; }
+    .status { text-align: center; margin-top: 1rem; color: #92400e; }
+    .tips { margin-top: 2rem; background: #fef3c7; padding: 1rem; border-radius: 0.75rem; color: #92400e; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖼️ AI 背景去除</h1>
+    <p class="subtitle">上传图片，自动去除背景</p>
+
+    <input type="file" id="fileInput" accept="image/*">
+    
+    <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📁</div>
+      <p class="upload-text">点击选择图片<br><small>支持 PNG、JPG、WebP</small></p>
+    </div>
+
+    <div class="preview-area" id="previewArea">
+      <div class="preview-box">
+        <h3>原图</h3>
+        <img id="originalImg" src="">
+      </div>
+      <div class="preview-box result">
+        <h3>结果</h3>
+        <img id="resultImg" src="">
+        <button onclick="downloadResult()" style="margin-top:0.5rem;padding:0.25rem 0.75rem;background:#22c55e;color:white;border:none;border-radius:0.5rem;cursor:pointer;display:none" id="downloadBtn">下载</button>
+      </div>
+    </div>
+
+    <button class="process-btn" id="processBtn" onclick="processImage()" disabled>✨ 开始处理</button>
+    <p class="status" id="status"></p>
+
+    <div class="tips">
+      <p>💡 提示</p>
+      <ul>
+        <li>支持 PNG、JPG、WebP 等常见格式</li>
+        <li>最佳效果：主体清晰、背景简单</li>
+        <li>处理后的图片为 PNG 格式（透明背景）</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    var currentFile = null;
+
+    document.getElementById('fileInput').onchange = function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      
+      currentFile = file;
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('originalImg').src = evt.target.result;
+        document.getElementById('uploadBox').style.display = 'none';
+        document.getElementById('previewArea').classList.add('active');
+        document.getElementById('processBtn').disabled = false;
+        document.getElementById('status').textContent = '图片已加载，点击"开始处理"';
+        document.getElementById('status').className = 'status';
+      };
+      reader.readAsDataURL(file);
+    };
+
+    function processImage() {
+      if (!currentFile) return;
+
+      var btn = document.getElementById('processBtn');
+      var status = document.getElementById('status');
+      
+      btn.disabled = true;
+      btn.textContent = '处理中...';
+      status.textContent = '正在去除背景，请稍候...';
+
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        var base64 = evt.target.result.split(',')[1];
+
+        fetch('/api/remove-bg', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64 })
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          if (data.result) {
+            document.getElementById('resultImg').src = data.result;
+            document.getElementById('downloadBtn').style.display = 'block';
+            status.textContent = '✅ 处理完成！点击图片可保存';
+            status.className = 'status';
+          } else {
+            throw new Error(data.error || '处理失败');
+          }
+        })
+        .catch(function(err) {
+          status.textContent = '❌ ' + err.message;
+          status.className = 'status';
+        })
+        .finally(function() {
+          btn.disabled = false;
+          btn.textContent = '✨ 开始处理';
+        });
+      };
+      reader.readAsDataURL(currentFile);
+    }
+
+    function downloadResult() {
+      var link = document.createElement('a');
+      link.href = document.getElementById('resultImg').src;
+      link.download = 'removed-bg.png';
+      link.click();
+    }
+  </script>
+</body>
+</html>
+`;
+
+const API_KEY = 'w98ePuScjM2zVfpfQcVbSmR9';
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // 处理 API 请求
+    if (url.pathname === '/api/remove-bg' && request.method === 'POST') {
+      try {
+        const { image } = await request.json();
+        
+        if (!image) {
+          return new Response(JSON.stringify({ error: '缺少图片数据' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // 调用 remove.bg API
+        const formData = new FormData();
+        formData.append('image_file_b64', image);
+        formData.append('size', 'auto');
+        formData.append('format', 'png');
+
+        const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+          method: 'POST',
+          headers: { 'X-Api-Key': API_KEY },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          return new Response(JSON.stringify({ 
+            error: 'API调用失败',
+            details: errorText
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const binary = Array.from(new Uint8Array(arrayBuffer))
+          .map(byte => String.fromCharCode(byte))
+          .join('');
+        const base64 = btoa(binary);
+
+        return new Response(JSON.stringify({ 
+          result: \`data:image/png;base64,\${base64}\`,
+          success: true
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+
+      } catch (error) {
+        return new Response(JSON.stringify({ 
+          error: error.message 
+        }), {
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+    }
+
+    // 处理 CORS 预检
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        }
+      });
+    }
+
+    // 返回 HTML
+    return new Response(HTML, {
+      headers: { 
+        'Content-Type': 'text/html',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  }
+};

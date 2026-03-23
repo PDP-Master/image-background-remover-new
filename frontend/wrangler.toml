@@ -1,0 +1,5 @@
+name = "bg-remover"
+compatibility_date = "2023-12-01"
+
+[vars]
+REMOVE_BG_API_KEY = "w98ePuScjM2zVfpfQcVbSmR9"
