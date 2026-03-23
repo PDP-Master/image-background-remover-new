@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const API_KEY = process.env.REMOVE_BG_API_KEY || '你的API Key';
+    const API_KEY = process.env.REMOVE_BG_API_KEY || 'w98ePuScjM2zVfpfQcVbSmR9';
 
     const formData = new FormData();
     formData.append('image_file_b64', image);

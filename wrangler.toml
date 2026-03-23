@@ -3,8 +3,12 @@ compatibility_date = "2024-01-01"
 
 [build]
 command = "cd frontend && npm run build"
+cwd = "."
 
-pages_build_output_dir = "frontend/.next"
+pages_build_output_dir = "frontend/out"
 
 [vars]
 REMOVE_BG_API_KEY = "w98ePuScjM2zVfpfQcVbSmR9"
+
+# 指定 functions 目录
+functions_config_dir = "frontend/out/_functions"
