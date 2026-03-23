@@ -70,24 +70,24 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-amber-100 via-yellow-50 to-amber-50">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
+          <h1 className="text-4xl font-bold text-amber-900 mb-2">
             🖼️ AI 背景去除
           </h1>
-          <p className="text-purple-200">上传图片，自动去除背景</p>
+          <p className="text-amber-700">上传图片，自动去除背景</p>
         </div>
 
         {/* Upload Area */}
         <div
           className={`
-            bg-white rounded-2xl p-8 mb-6 cursor-pointer
+            bg-amber-50 rounded-2xl p-8 mb-6 cursor-pointer
             border-3 border-dashed transition-all duration-300
             ${isDragOver 
-              ? 'border-purple-500 bg-purple-50' 
-              : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
+              ? 'border-amber-500 bg-amber-100' 
+              : 'border-amber-300 hover:border-amber-500 hover:bg-amber-100'
             }
           `}
           onClick={() => fileInputRef.current?.click()}
@@ -106,10 +106,10 @@ export default function Home() {
           {!originalImage ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">📁</div>
-              <p className="text-gray-600 text-lg">
+              <p className="text-amber-800 text-lg">
                 点击或拖拽图片到这里
               </p>
-              <p className="text-purple-500 font-medium mt-2">
+              <p className="text-amber-600 font-medium mt-2">
                 或浏览文件
               </p>
             </div>
@@ -160,8 +160,8 @@ export default function Home() {
             w-full py-4 rounded-xl text-xl font-semibold text-white
             transition-all duration-300 transform
             ${!originalImage || isProcessing
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 hover:-translate-y-1 hover:shadow-lg'
+              ? 'bg-amber-300 cursor-not-allowed'
+              : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 hover:-translate-y-1 hover:shadow-lg'
             }
           `}
         >
@@ -186,7 +186,7 @@ export default function Home() {
         )}
 
         {/* Tips */}
-        <div className="mt-8 bg-white/10 backdrop-blur rounded-xl p-4 text-purple-200 text-sm">
+        <div className="mt-8 bg-amber-100/50 backdrop-blur rounded-xl p-4 text-amber-800 text-sm">
           <p className="font-semibold mb-2">💡 提示</p>
           <ul className="list-disc list-inside space-y-1">
             <li>支持 PNG、JPG、WebP 等常见格式</li>
